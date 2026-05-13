@@ -64,6 +64,25 @@ function getSampleRates(classification) {
   });
 }
 
+function buildFwcApiUrl(routePath, baseUrl = process.env.FWC_API_BASE_URL || "https://api.fwc.gov.au/api/v1") {
+  if (/^https?:\/\//i.test(routePath)) {
+    return new URL(routePath);
+  }
+
+  const cleanBase = baseUrl.replace(/\/+$/, "");
+  const cleanPath = routePath.replace(/^\/+/, "");
+  return new URL(`${cleanBase}/${cleanPath}`);
+}
+
+function getFwcApiHeaders() {
+  const key = process.env.FWC_API_SUBSCRIPTION_KEY;
+  const keyHeader = process.env.FWC_API_KEY_HEADER || "Ocp-Apim-Subscription-Key";
+  return {
+    Accept: "application/json",
+    ...(key ? { [keyHeader]: key } : {})
+  };
+}
+
 function decodeEntities(value) {
   return value
     .replace(/&nbsp;/gi, " ")
@@ -215,8 +234,7 @@ async function proxyFwcPayRates(requestUrl, res) {
 
   const baseUrl = process.env.FWC_API_BASE_URL || "https://api.fwc.gov.au/api/v1";
   const payRatesPath = process.env.FWC_API_PAY_RATES_PATH || "/payrates";
-  const keyHeader = process.env.FWC_API_KEY_HEADER || "Ocp-Apim-Subscription-Key";
-  const target = new URL(payRatesPath, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
+  const target = buildFwcApiUrl(payRatesPath, baseUrl);
 
   for (const [name, value] of requestUrl.searchParams.entries()) {
     target.searchParams.set(name, value);
@@ -225,10 +243,7 @@ async function proxyFwcPayRates(requestUrl, res) {
 
   try {
     const response = await fetch(target, {
-      headers: {
-        Accept: "application/json",
-        [keyHeader]: key
-      }
+      headers: getFwcApiHeaders()
     });
 
     const contentType = response.headers.get("content-type") || "";
@@ -251,6 +266,47 @@ async function proxyFwcPayRates(requestUrl, res) {
       error: error.message,
       awardCode,
       rates: getSampleRates(classification)
+    });
+  }
+}
+
+async function testFwcApi(res) {
+  const key = process.env.FWC_API_SUBSCRIPTION_KEY;
+  const awardsPath = process.env.FWC_API_AWARDS_PATH || "/awards";
+  const target = buildFwcApiUrl(awardsPath);
+
+  if (!key) {
+    json(res, 200, {
+      connected: false,
+      message: "FWC_API_SUBSCRIPTION_KEY is not set on this server.",
+      expectedHeader: process.env.FWC_API_KEY_HEADER || "Ocp-Apim-Subscription-Key",
+      testEndpoint: target.toString()
+    });
+    return;
+  }
+
+  try {
+    const response = await fetch(target, {
+      headers: getFwcApiHeaders()
+    });
+    const contentType = response.headers.get("content-type") || "";
+    const body = contentType.includes("application/json")
+      ? await response.json()
+      : await response.text();
+
+    json(res, response.ok ? 200 : response.status, {
+      connected: response.ok,
+      status: response.status,
+      expectedHeader: process.env.FWC_API_KEY_HEADER || "Ocp-Apim-Subscription-Key",
+      testEndpoint: target.toString(),
+      sample: Array.isArray(body) ? body.slice(0, 3) : body
+    });
+  } catch (error) {
+    json(res, 502, {
+      connected: false,
+      expectedHeader: process.env.FWC_API_KEY_HEADER || "Ocp-Apim-Subscription-Key",
+      testEndpoint: target.toString(),
+      error: error.message
     });
   }
 }
@@ -308,6 +364,11 @@ const server = http.createServer(async (req, res) => {
 
   if (requestUrl.pathname === "/api/pay-rates") {
     await proxyFwcPayRates(requestUrl, res);
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/fwc-test") {
+    await testFwcApi(res);
     return;
   }
 

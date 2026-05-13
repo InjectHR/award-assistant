@@ -607,9 +607,12 @@ function normaliseApiRates(data) {
 }
 
 function renderRates(payload, rates) {
+  const hasManufacturingDemoRates = !payload.connected && state.selectedAward.code === "MA000010";
   const connectedLabel = payload.connected
     ? "Live FWC API response"
-    : "Demo fallback; configure FWC_API_SUBSCRIPTION_KEY for live API calls";
+    : hasManufacturingDemoRates
+      ? "Manufacturing demo fallback"
+      : "Live MAPD not configured";
   const note = payload.message || payload.source || connectedLabel;
   const rows = rates.length ? rates : state.selectedAward.code === "MA000010" ? payRateRows : [];
 

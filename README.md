@@ -47,7 +47,15 @@ $env:FWC_API_PAY_RATES_PATH="/payrates"
 npm start
 ```
 
-If your FWC portal account shows a different pay-rate path, set `FWC_API_PAY_RATES_PATH` to that path. The subscription key is sent using `Ocp-Apim-Subscription-Key`.
+If your FWC portal account shows a different pay-rate path, set `FWC_API_PAY_RATES_PATH` to that path. The subscription key is sent using the `Ocp-Apim-Subscription-Key` header by default.
+
+To check whether your Render environment has the key configured correctly, open:
+
+```text
+https://your-render-site.onrender.com/api/fwc-test
+```
+
+If the key is installed and the `/awards` route is correct, this returns `connected: true`. If FWC uses a different awards-list route in your portal, set `FWC_API_AWARDS_PATH` to that route.
 
 ## Official Sources Used
 
