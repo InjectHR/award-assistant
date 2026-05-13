@@ -70,8 +70,19 @@ function buildFwcApiUrl(routePath, baseUrl = process.env.FWC_API_BASE_URL || "ht
   }
 
   const cleanBase = baseUrl.replace(/\/+$/, "");
-  const cleanPath = routePath.replace(/^\/+/, "");
+  let cleanPath = routePath.replace(/^\/+/, "");
+  if (/\/api\/v1$/i.test(cleanBase) && /^api\/v1\//i.test(cleanPath)) {
+    cleanPath = cleanPath.replace(/^api\/v1\//i, "");
+  }
   return new URL(`${cleanBase}/${cleanPath}`);
+}
+
+function getPayRatesPath() {
+  const configuredPath = process.env.FWC_API_PAY_RATES_PATH || "/api/v1/awards/{id_or_code}/pay-rates";
+  if (/^\/?pay-?rates$/i.test(configuredPath)) {
+    return "/api/v1/awards/{id_or_code}/pay-rates";
+  }
+  return configuredPath;
 }
 
 function getFwcApiHeaders() {
@@ -232,14 +243,28 @@ async function proxyFwcPayRates(requestUrl, res) {
     return;
   }
 
-  const baseUrl = process.env.FWC_API_BASE_URL || "https://api.fwc.gov.au/api/v1";
-  const payRatesPath = process.env.FWC_API_PAY_RATES_PATH || "/payrates";
+  const baseUrl = process.env.FWC_API_BASE_URL || "https://api.fwc.gov.au";
+  const payRatesPath = getPayRatesPath().replace("{id_or_code}", encodeURIComponent(awardCode));
   const target = buildFwcApiUrl(payRatesPath, baseUrl);
+  const allowedQueryParams = new Set([
+    "classification_level",
+    "classification_fixed_id",
+    "employee_rate_type_code",
+    "page",
+    "limit",
+    "operative_from",
+    "operative_to",
+    "sort"
+  ]);
 
   for (const [name, value] of requestUrl.searchParams.entries()) {
-    target.searchParams.set(name, value);
+    if (allowedQueryParams.has(name) && value) {
+      target.searchParams.set(name, value);
+    }
   }
-  target.searchParams.set("awardCode", awardCode);
+  if (!target.searchParams.has("limit")) {
+    target.searchParams.set("limit", "100");
+  }
 
   try {
     const response = await fetch(target, {
@@ -272,8 +297,9 @@ async function proxyFwcPayRates(requestUrl, res) {
 
 async function testFwcApi(res) {
   const key = process.env.FWC_API_SUBSCRIPTION_KEY;
-  const awardsPath = process.env.FWC_API_AWARDS_PATH || "/awards";
+  const awardsPath = process.env.FWC_API_AWARDS_PATH || "/api/v1/awards";
   const target = buildFwcApiUrl(awardsPath);
+  target.searchParams.set("limit", "1");
 
   if (!key) {
     json(res, 200, {
@@ -351,7 +377,7 @@ const server = http.createServer(async (req, res) => {
     json(res, 200, {
       ok: true,
       fwcApiConfigured: Boolean(process.env.FWC_API_SUBSCRIPTION_KEY),
-      fwcApiBaseUrl: process.env.FWC_API_BASE_URL || "https://api.fwc.gov.au/api/v1",
+      fwcApiBaseUrl: process.env.FWC_API_BASE_URL || "https://api.fwc.gov.au",
       officialSources: {
         awardHtml: "https://awards.fairwork.gov.au/MA000010.html",
         awardPdf: "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000010.pdf",

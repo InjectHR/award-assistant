@@ -135,10 +135,13 @@ const payRateOutput = document.querySelector("#payRateOutput");
 const currentAwardCode = document.querySelector("#currentAwardCode");
 const currentAwardStatus = document.querySelector("#currentAwardStatus");
 const currentAwardUse = document.querySelector("#currentAwardUse");
-const officialAwardFrame = document.querySelector("#officialAwardFrame");
 const officialAwardLink = document.querySelector("#officialAwardLink");
 const payGuidePdfLink = document.querySelector("#payGuidePdfLink");
 const payGuideDocxLink = document.querySelector("#payGuideDocxLink");
+const officialSourceTitle = document.querySelector("#officialSourceTitle");
+const officialPageOpenLink = document.querySelector("#officialPageOpenLink");
+const officialPagePdfLink = document.querySelector("#officialPagePdfLink");
+const officialPagePayGuideLink = document.querySelector("#officialPagePayGuideLink");
 
 const jumpTopics = {
   "ordinary-hours": {
@@ -208,14 +211,17 @@ function renderAwardMeta() {
   currentAwardStatus.textContent =
     award.code === "MA000010" ? "Curated clauses + official source" : "Official source searchable";
   currentAwardUse.textContent = "HR clause lookup";
-  officialAwardFrame.src = awardHtmlUrl(award);
-  officialAwardFrame.title = `Official ${award.title} page`;
   officialAwardLink.href = awardHtmlUrl(award);
   officialAwardLink.textContent = `${award.code} official award`;
   payGuidePdfLink.href = payGuideUrl("pdf", award);
   payGuidePdfLink.textContent = `${award.code} pay guide PDF`;
   payGuideDocxLink.href = payGuideUrl("docx", award);
   payGuideDocxLink.textContent = `${award.code} pay guide DOCX`;
+  officialSourceTitle.textContent = award.title;
+  officialPageOpenLink.href = awardHtmlUrl(award);
+  officialPageOpenLink.textContent = `Open ${award.code} award`;
+  officialPagePdfLink.href = awardPdfUrl(award);
+  officialPagePayGuideLink.href = payGuideUrl("pdf", award);
   document.querySelector("#viewerTitle").textContent = award.title;
 }
 
@@ -595,6 +601,10 @@ function normaliseApiRates(data) {
     return data;
   }
 
+  if (data && Array.isArray(data.results)) {
+    return data.results;
+  }
+
   if (data && Array.isArray(data.data)) {
     return data.data;
   }
@@ -634,26 +644,36 @@ function rateTable(rates) {
     return `<p>No rates returned for this filter.</p>`;
   }
 
+  const isMapdResponse = rates.some((rate) => "base_rate" in rate || "calculated_rate" in rate);
+
   return `
     <table class="rate-table">
       <thead>
         <tr>
           <th>Classification</th>
-          <th>Weekly</th>
-          <th>Hourly</th>
+          <th>${isMapdResponse ? "Base rate" : "Weekly"}</th>
+          <th>${isMapdResponse ? "Calculated rate" : "Hourly"}</th>
         </tr>
       </thead>
       <tbody>
         ${rates
           .map((rate) => {
-            const classification = rate.classification || rate.classificationLevel || rate.name || "Returned rate";
-            const weekly = rate.weekly ?? rate.minimumWeeklyRate ?? rate.weekly_rate;
-            const hourly = rate.hourly ?? rate.minimumHourlyRate ?? rate.hourly_rate;
+            const classification =
+              rate.classification ||
+              rate.parent_classification_name ||
+              rate.classificationLevel ||
+              rate.name ||
+              "Returned rate";
+            const baseRate = rate.base_rate ?? rate.weekly ?? rate.minimumWeeklyRate ?? rate.weekly_rate;
+            const calculatedRate =
+              rate.calculated_rate ?? rate.hourly ?? rate.minimumHourlyRate ?? rate.hourly_rate;
+            const baseLabel = rate.base_rate_type || "";
+            const calculatedLabel = rate.calculated_rate_type || "";
             return `
               <tr>
                 <td>${escapeHtml(classification)}</td>
-                <td>${weekly === undefined ? "Check API response" : money(weekly)}</td>
-                <td>${hourly === undefined ? "Check API response" : money(hourly)}</td>
+                <td>${baseRate === undefined || baseRate === null ? "Check API response" : `${money(baseRate)} ${escapeHtml(baseLabel)}`}</td>
+                <td>${calculatedRate === undefined || calculatedRate === null ? "Check API response" : `${money(calculatedRate)} ${escapeHtml(calculatedLabel)}`}</td>
               </tr>
             `;
           })

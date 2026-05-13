@@ -74,15 +74,18 @@
         <div id="clauseView" class="viewer-content"></div>
 
         <div id="officialView" class="official-view" hidden>
-          <iframe
-            id="officialAwardFrame"
-            title="Official award page"
-            src="https://awards.fairwork.gov.au/MA000010.html"
-            loading="lazy"
-          ></iframe>
-          <p class="frame-note">
-            If the official page blocks embedding in your browser, open the same source from the link above.
-          </p>
+          <div class="official-source-panel">
+            <p class="eyebrow">Official source</p>
+            <h3 id="officialSourceTitle">Manufacturing and Associated Industries and Occupations Award</h3>
+            <p>
+              Fair Work blocks this source from being embedded inside another site. Open the official source in a new tab, or keep using the searchable clause viewer here.
+            </p>
+            <div class="official-source-actions">
+              <a id="officialPageOpenLink" class="primary-link-button" href="https://awards.fairwork.gov.au/MA000010.html" target="_blank" rel="noreferrer">Open official award</a>
+              <a id="officialPagePdfLink" class="soft-link-button" href="https://www.fwc.gov.au/documents/modern_awards/pdf/ma000010.pdf" target="_blank" rel="noreferrer">Open award PDF</a>
+              <a id="officialPagePayGuideLink" class="soft-link-button" href="https://calculate.fairwork.gov.au/Download/AwardSummary?awardCode=ma000010&fileType=pdf" target="_blank" rel="noreferrer">Open pay guide</a>
+            </div>
+          </div>
         </div>
 
         <div id="ratesView" class="rates-view" hidden>

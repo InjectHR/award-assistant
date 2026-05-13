@@ -42,8 +42,8 @@ To connect a live subscription:
 
 ```powershell
 $env:FWC_API_SUBSCRIPTION_KEY="your-key"
-$env:FWC_API_BASE_URL="https://api.fwc.gov.au/api/v1"
-$env:FWC_API_PAY_RATES_PATH="/payrates"
+$env:FWC_API_BASE_URL="https://api.fwc.gov.au"
+$env:FWC_API_PAY_RATES_PATH="/api/v1/awards/{id_or_code}/pay-rates"
 npm start
 ```
 
@@ -55,7 +55,7 @@ To check whether your Render environment has the key configured correctly, open:
 https://your-render-site.onrender.com/api/fwc-test
 ```
 
-If the key is installed and the `/awards` route is correct, this returns `connected: true`. If FWC uses a different awards-list route in your portal, set `FWC_API_AWARDS_PATH` to that route.
+If the key is installed and the `/api/v1/awards` route is correct, this returns `connected: true`. If FWC uses a different awards-list route in your portal, set `FWC_API_AWARDS_PATH` to that route.
 
 ## Official Sources Used
 

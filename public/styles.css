@@ -369,19 +369,53 @@ button:focus-visible {
   padding-left: 18px;
 }
 
-.official-view iframe {
-  width: 100%;
-  height: calc(100% - 42px);
-  border: 0;
+.official-source-panel {
+  max-width: 720px;
+  margin: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   background: #fff;
 }
 
-.frame-note {
-  margin: 0;
-  padding: 10px 16px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 13px;
+.official-source-panel h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.official-source-panel p {
+  margin: 8px 0;
+}
+
+.official-source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.primary-link-button,
+.soft-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.primary-link-button {
+  border: 1px solid var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.soft-link-button {
+  border: 1px solid var(--line);
+  background: var(--soft);
+  color: var(--ink);
 }
 
 .rates-toolbar {
@@ -525,10 +559,6 @@ button:focus-visible {
     height: auto;
     min-height: 0;
     max-height: none;
-  }
-
-  .official-view iframe {
-    min-height: 620px;
   }
 
   .rates-toolbar,
