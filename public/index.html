@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Award Assistant</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Fair Work / FWC award library</p>
+        <h1>Award Assistant</h1>
+      </div>
+      <div class="source-strip" aria-label="Official sources">
+        <a id="officialAwardLink" href="https://awards.fairwork.gov.au/MA000010.html" target="_blank" rel="noreferrer">Official award</a>
+        <a href="https://www.fairwork.gov.au/employment-conditions/awards/list-of-awards" target="_blank" rel="noreferrer">A-Z awards</a>
+        <a href="https://www.fwc.gov.au/work-conditions/awards/modern-awards-pay-database" target="_blank" rel="noreferrer">MAPD extracts</a>
+        <a href="https://developer.fwc.gov.au/" target="_blank" rel="noreferrer">FWC API</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="library-panel" aria-label="Award picker">
+        <section class="panel-section">
+          <label class="field-label" for="awardSearch">Award picker/search all awards</label>
+          <input id="awardSearch" class="search-input" type="search" value="Manufacturing Award" autocomplete="off">
+          <div id="awardResults" class="award-results" aria-live="polite"></div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Current award</h2>
+          <div class="meta-grid">
+            <span>Award code</span>
+            <strong id="currentAwardCode">MA000010</strong>
+            <span>Status</span>
+            <strong id="currentAwardStatus">Official source indexed</strong>
+            <span>Use case</span>
+            <strong id="currentAwardUse">HR clause lookup</strong>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Related tools</h2>
+          <a id="payGuidePdfLink" class="soft-button link-button" href="https://calculate.fairwork.gov.au/Download/AwardSummary?awardCode=ma000010&fileType=pdf" target="_blank" rel="noreferrer">Pay guide PDF</a>
+          <a id="payGuideDocxLink" class="soft-button link-button" href="https://calculate.fairwork.gov.au/Download/AwardSummary?awardCode=ma000010&fileType=docx" target="_blank" rel="noreferrer">Pay guide DOCX</a>
+          <button class="soft-button" type="button" data-action="check-classifications">Check classifications</button>
+          <button class="soft-button" type="button" data-action="check-pay-rates">Check pay rates</button>
+          <button class="soft-button" type="button" data-action="compare-nes">Compare with NES</button>
+        </section>
+      </aside>
+
+      <section class="viewer-panel" aria-label="Award viewer">
+        <div class="viewer-toolbar">
+          <div>
+            <p class="eyebrow">Embedded viewer</p>
+            <h2 id="viewerTitle">Manufacturing and Associated Industries and Occupations Award 2020</h2>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Viewer tabs">
+            <button class="tab is-active" type="button" data-view="clauses">Clauses</button>
+            <button class="tab" type="button" data-view="official">Official page</button>
+            <button class="tab" type="button" data-view="rates">Rates</button>
+          </div>
+        </div>
+
+        <nav class="jump-bar" aria-label="Jump to common award topics">
+          <button type="button" data-jump="ordinary-hours">Ordinary hours</button>
+          <button type="button" data-jump="overtime">Overtime</button>
+          <button type="button" data-jump="penalty-rates">Penalty rates</button>
+          <button type="button" data-jump="annual-leave">Annual leave</button>
+          <button type="button" data-jump="classifications">Classifications</button>
+        </nav>
+
+        <div id="clauseView" class="viewer-content"></div>
+
+        <div id="officialView" class="official-view" hidden>
+          <iframe
+            id="officialAwardFrame"
+            title="Official award page"
+            src="https://awards.fairwork.gov.au/MA000010.html"
+            loading="lazy"
+          ></iframe>
+          <p class="frame-note">
+            If the official page blocks embedding in your browser, open the same source from the link above.
+          </p>
+        </div>
+
+        <div id="ratesView" class="rates-view" hidden>
+          <div class="rates-toolbar">
+            <label for="classificationSelect">Classification</label>
+            <select id="classificationSelect"></select>
+            <button id="rateLookupButton" class="primary-button" type="button">Check pay rates</button>
+          </div>
+          <div id="payRateOutput" class="rate-output" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <aside class="assistant-panel" aria-label="AI explanation panel">
+        <section class="ask-box">
+          <label class="field-label" for="questionInput">Ask the award</label>
+          <textarea id="questionInput" rows="3">annual leave clause</textarea>
+          <button id="askButton" class="primary-button" type="button">Ask</button>
+        </section>
+
+        <section class="action-row" aria-label="Clause actions">
+          <button type="button" data-action="copy-clause">Copy clause</button>
+          <button type="button" data-action="summarise-clause">Summarise clause</button>
+          <button type="button" data-action="compare-nes">Compare with NES</button>
+        </section>
+
+        <section class="answer-panel">
+          <div class="answer-heading">
+            <p class="eyebrow">AI explanation panel</p>
+            <h2 id="answerTitle">Ready</h2>
+          </div>
+          <div id="answerBody" class="answer-body">
+            Search for the Manufacturing Award, then ask about the annual leave clause.
+          </div>
+        </section>
+
+        <section class="disclaimer">
+          <strong>General information only.</strong>
+          Check the current award, NES and FWC/Fair Work sources before relying on this.
+        </section>
+      </aside>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="/awards.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

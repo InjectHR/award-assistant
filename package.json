@@ -1,0 +1,12 @@
+{
+  "name": "award-assistant",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Small Award Assistant web app for Fair Work/FWC award lookup, clause search, and pay-rate checks.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
