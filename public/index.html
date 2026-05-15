@@ -25,6 +25,7 @@
         <section class="panel-section">
           <label class="field-label" for="awardSearch">Award picker/search all awards</label>
           <input id="awardSearch" class="search-input" type="search" placeholder="Search or scroll all awards" autocomplete="off">
+          <button id="industryFilterButton" class="filter-toggle" type="button" aria-pressed="false">View occupational awards only</button>
           <div id="awardResults" class="award-results" aria-live="polite"></div>
         </section>
 
@@ -59,7 +60,7 @@
           </div>
           <div class="tabs" role="tablist" aria-label="Viewer tabs">
             <button class="tab is-active" type="button" data-view="clauses">Clauses</button>
-            <button class="tab" type="button" data-view="official">Official page</button>
+            <button class="tab" type="button" data-view="official">Award viewer</button>
             <button class="tab" type="button" data-view="rates">Rates</button>
             <button class="tab" type="button" data-view="payGuide">Pay guide</button>
           </div>
@@ -76,18 +77,15 @@
         <div id="clauseView" class="viewer-content"></div>
 
         <div id="officialView" class="official-view" hidden>
-          <div class="official-source-panel">
-            <p class="eyebrow">Official source</p>
-            <h3 id="officialSourceTitle">Manufacturing and Associated Industries and Occupations Award</h3>
-            <p>
-              Fair Work blocks this source from being embedded inside another site. Open the official source in a new tab, or keep using the searchable clause viewer here.
-            </p>
-            <div class="official-source-actions">
-              <a id="officialPageOpenLink" class="primary-link-button" href="https://awards.fairwork.gov.au/MA000010.html" target="_blank" rel="noreferrer">Open official award</a>
-              <a id="officialPagePdfLink" class="soft-link-button" href="https://www.fwc.gov.au/documents/modern_awards/pdf/ma000010.pdf" target="_blank" rel="noreferrer">Open award PDF</a>
-              <a id="officialPagePayGuideLink" class="soft-link-button" href="https://calculate.fairwork.gov.au/Download/AwardSummary?awardCode=ma000010&fileType=pdf" target="_blank" rel="noreferrer">Open pay guide</a>
-            </div>
-          </div>
+          <iframe
+            id="awardHtmlFrame"
+            title="Award HTML viewer"
+            src="/api/award-html?code=MA000010"
+            loading="lazy"
+          ></iframe>
+          <p class="frame-note">
+            This is the official award HTML loaded through the app so shortcut buttons can highlight sections. Use the Official award link for the source page.
+          </p>
         </div>
 
         <div id="ratesView" class="rates-view" hidden>

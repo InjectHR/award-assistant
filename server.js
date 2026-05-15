@@ -119,6 +119,149 @@ function htmlToSearchableText(html) {
   ).trim();
 }
 
+function awardViewerScript() {
+  return `
+    <script>
+      (function () {
+        var topicTerms = {
+          "ordinary hours": [["ordinary", "hours"]],
+          "overtime": [["overtime"]],
+          "penalty rates": [["penalty", "rates"], ["penalties"]],
+          "annual leave": [["annual", "leave"]],
+          "classifications": [["classification"], ["classifications"]]
+        };
+
+        function normalise(value) {
+          return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        }
+
+        function visibleText(element) {
+          return String(element.textContent || "").replace(/\\s+/g, " ").trim();
+        }
+
+        function scoreCandidate(element, query, topic) {
+          var text = visibleText(element);
+          if (!text || text.length > 260) return 0;
+          var normalised = normalise(text);
+          var groups = topicTerms[normalise(topic)] || [normalise(query).split(" ").filter(Boolean)];
+          var best = 0;
+
+          groups.forEach(function (terms) {
+            if (terms.length && terms.every(function (term) { return normalised.indexOf(term) !== -1; })) {
+              best = Math.max(best, terms.length * 10);
+            }
+          });
+
+          if (!best) return 0;
+          if (/^(\\d+[A-Z]?(?:\\.\\d+)?|Schedule\\s+[A-Z])\\.?\\s+/i.test(text)) best += 12;
+          if (/^(H[1-6]|B|STRONG)$/i.test(element.tagName)) best += 6;
+          return best - Math.min(text.length / 200, 1);
+        }
+
+        function jumpToAwardTopic(payload) {
+          var query = payload.query || payload.topic || "";
+          var topic = payload.topic || query;
+          var candidates = Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,h5,h6,p,li,b,strong,td,div"));
+          var best = candidates
+            .map(function (element, index) {
+              return { element: element, index: index, score: scoreCandidate(element, query, topic) };
+            })
+            .filter(function (item) { return item.score > 0; })
+            .sort(function (a, b) { return b.score - a.score || a.index - b.index; })[0];
+
+          Array.prototype.forEach.call(document.querySelectorAll(".award-assistant-highlight"), function (element) {
+            element.classList.remove("award-assistant-highlight");
+          });
+
+          if (!best) {
+            window.parent.postMessage({ type: "award-jump-result", found: false, topic: topic }, "*");
+            return;
+          }
+
+          best.element.classList.add("award-assistant-highlight");
+          best.element.scrollIntoView({ behavior: "smooth", block: "center" });
+          window.parent.postMessage({
+            type: "award-jump-result",
+            found: true,
+            topic: topic,
+            text: visibleText(best.element).slice(0, 180)
+          }, "*");
+        }
+
+        window.addEventListener("message", function (event) {
+          if (event.data && event.data.type === "award-jump") {
+            jumpToAwardTopic(event.data);
+          }
+        });
+      })();
+    </script>
+  `;
+}
+
+function makeEmbeddableAwardHtml(html, code) {
+  const viewerCss = `
+    <style>
+      html { scroll-behavior: smooth; }
+      body { padding: 18px; }
+      a[target="_blank"]::after { content: ""; }
+      .award-assistant-highlight {
+        background: #fff0a6 !important;
+        box-shadow: 0 0 0 4px rgba(255, 240, 166, 0.85) !important;
+        border-radius: 4px !important;
+      }
+    </style>
+  `;
+  const base = `<base href="https://awards.fairwork.gov.au/" target="_blank">`;
+  const safeHtml = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<form[\s\S]*?<\/form>/gi, "");
+  const withHead = safeHtml.includes("</head>")
+    ? safeHtml.replace("</head>", `${base}${viewerCss}</head>`)
+    : `${base}${viewerCss}${safeHtml}`;
+
+  const script = awardViewerScript();
+  return withHead.includes("</body>")
+    ? withHead.replace("</body>", `${script}</body>`)
+    : `${withHead}${script}`;
+}
+
+async function serveAwardHtml(requestUrl, res) {
+  const code = (requestUrl.searchParams.get("code") || "").toUpperCase();
+
+  if (!/^MA\d{6}$/.test(code)) {
+    res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+    res.end("<p>Award code must look like MA000010.</p>");
+    return;
+  }
+
+  const url = `https://awards.fairwork.gov.au/${code}.html`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml"
+      }
+    });
+
+    if (!response.ok) {
+      res.writeHead(response.status, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(`<p>The official award source returned ${response.status}.</p>`);
+      return;
+    }
+
+    const html = await response.text();
+    res.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "private, max-age=3600",
+      "X-Award-Code": code
+    });
+    res.end(makeEmbeddableAwardHtml(html, code));
+  } catch (error) {
+    res.writeHead(502, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(`<p>The official award source could not be loaded: ${error.message}</p>`);
+  }
+}
+
 function getQueryTerms(query) {
   return query
     .toLowerCase()
@@ -508,6 +651,11 @@ const server = http.createServer(async (req, res) => {
 
   if (requestUrl.pathname === "/api/pay-guide") {
     await proxyPayGuide(requestUrl, res);
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/award-html") {
+    await serveAwardHtml(requestUrl, res);
     return;
   }
 

@@ -176,6 +176,25 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+.filter-toggle {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--ink);
+  font-weight: 700;
+  text-align: center;
+}
+
+.filter-toggle[aria-pressed="true"] {
+  border-color: var(--green);
+  background: #e8f5f0;
+  color: #0f4f3d;
+}
+
 .award-results {
   display: grid;
   gap: 8px;
@@ -333,6 +352,7 @@ button:focus-visible {
   background: #fbfcfd;
 }
 
+.official-view iframe,
 .pay-guide-view iframe {
   display: block;
   width: 100%;
@@ -388,31 +408,6 @@ button:focus-visible {
   gap: 8px;
   margin: 12px 0 0;
   padding-left: 18px;
-}
-
-.official-source-panel {
-  max-width: 720px;
-  margin: 16px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-}
-
-.official-source-panel h3 {
-  margin: 0 0 8px;
-  font-size: 20px;
-}
-
-.official-source-panel p {
-  margin: 8px 0;
-}
-
-.official-source-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
 }
 
 .primary-link-button,
@@ -584,6 +579,7 @@ button:focus-visible {
     max-height: none;
   }
 
+  .official-view iframe,
   .pay-guide-view iframe {
     min-height: 620px;
   }

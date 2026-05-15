@@ -114,12 +114,14 @@ const state = {
   selectedClauseId: "clause-34",
   dynamicClauses: [],
   isLoadingAwardText: false,
+  hideIndustryAwards: false,
   lastSearchTerm: "annual leave",
   currentView: "clauses"
 };
 
 const awardSearch = document.querySelector("#awardSearch");
 const awardResults = document.querySelector("#awardResults");
+const industryFilterButton = document.querySelector("#industryFilterButton");
 const clauseView = document.querySelector("#clauseView");
 const officialView = document.querySelector("#officialView");
 const ratesView = document.querySelector("#ratesView");
@@ -139,10 +141,7 @@ const currentAwardUse = document.querySelector("#currentAwardUse");
 const officialAwardLink = document.querySelector("#officialAwardLink");
 const payGuidePdfLink = document.querySelector("#payGuidePdfLink");
 const payGuideDocxLink = document.querySelector("#payGuideDocxLink");
-const officialSourceTitle = document.querySelector("#officialSourceTitle");
-const officialPageOpenLink = document.querySelector("#officialPageOpenLink");
-const officialPagePdfLink = document.querySelector("#officialPagePdfLink");
-const officialPagePayGuideLink = document.querySelector("#officialPagePayGuideLink");
+const awardHtmlFrame = document.querySelector("#awardHtmlFrame");
 const payGuideFrame = document.querySelector("#payGuideFrame");
 
 const jumpTopics = {
@@ -188,6 +187,10 @@ function payGuideViewerUrl(award = state.selectedAward) {
   return `/api/pay-guide?awardCode=${encodeURIComponent(award.code)}`;
 }
 
+function awardHtmlViewerUrl(award = state.selectedAward) {
+  return `/api/award-html?code=${encodeURIComponent(award.code)}`;
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -223,11 +226,7 @@ function renderAwardMeta() {
   payGuidePdfLink.textContent = `${award.code} pay guide PDF`;
   payGuideDocxLink.href = payGuideUrl("docx", award);
   payGuideDocxLink.textContent = `${award.code} pay guide DOCX`;
-  officialSourceTitle.textContent = award.title;
-  officialPageOpenLink.href = awardHtmlUrl(award);
-  officialPageOpenLink.textContent = `Open ${award.code} award`;
-  officialPagePdfLink.href = awardPdfUrl(award);
-  officialPagePayGuideLink.href = payGuideUrl("pdf", award);
+  awardHtmlFrame.src = awardHtmlViewerUrl(award);
   payGuideFrame.src = payGuideViewerUrl(award);
   document.querySelector("#viewerTitle").textContent = award.title;
 }
@@ -239,12 +238,14 @@ function activeClauses() {
 function renderAwardResults() {
   const query = awardSearch.value.trim().toLowerCase();
   const terms = query.split(/[^a-z0-9]+/).filter(Boolean);
-  const matches = awardLibrary.filter((award) => {
-    const haystack = [award.code, award.shortName, award.title, ...award.keywords]
-      .join(" ")
-      .toLowerCase();
-    return !query || haystack.includes(query) || terms.every((term) => haystack.includes(term));
-  });
+  const matches = awardLibrary
+    .filter((award) => !state.hideIndustryAwards || !/\bindustry\b/i.test(award.title))
+    .filter((award) => {
+      const haystack = [award.code, award.shortName, award.title, ...award.keywords]
+        .join(" ")
+        .toLowerCase();
+      return !query || haystack.includes(query) || terms.every((term) => haystack.includes(term));
+    });
 
   awardResults.innerHTML = matches
     .map(
@@ -260,6 +261,15 @@ function renderAwardResults() {
   if (!matches.length) {
     awardResults.innerHTML = `<p class="source-note">No award match in the local A-Z catalogue. Check the official Fair Work list.</p>`;
   }
+}
+
+function toggleIndustryFilter() {
+  state.hideIndustryAwards = !state.hideIndustryAwards;
+  industryFilterButton.setAttribute("aria-pressed", String(state.hideIndustryAwards));
+  industryFilterButton.textContent = state.hideIndustryAwards
+    ? "View all awards"
+    : "View occupational awards only";
+  renderAwardResults();
 }
 
 function highlightText(text, term) {
@@ -369,6 +379,32 @@ function setView(view) {
   tabs.forEach((tab) => {
     tab.classList.toggle("is-active", tab.dataset.view === view);
   });
+}
+
+function sendAwardViewerJump(topic) {
+  if (!topic || !awardHtmlFrame.contentWindow) {
+    return;
+  }
+
+  awardHtmlFrame.contentWindow.postMessage(
+    {
+      type: "award-jump",
+      topic: topic.label,
+      query: topic.query
+    },
+    "*"
+  );
+}
+
+function jumpAwardViewer(topic) {
+  state.pendingViewerJump = topic;
+  setView("official");
+  answerTitle.textContent = topic.label;
+  answerBody.innerHTML = `
+    <p>Opened ${escapeHtml(state.selectedAward.code)} in the award viewer and highlighted the first matching ${escapeHtml(topic.label.toLowerCase())} heading I could find.</p>
+  `;
+
+  window.setTimeout(() => sendAwardViewerJump(topic), 150);
 }
 
 function scoreClause(clause, query) {
@@ -747,20 +783,7 @@ async function jumpToTopic(topicKey) {
   }
 
   questionInput.value = topic.query;
-
-  if (topicKey === "classifications") {
-    checkClassifications();
-    return;
-  }
-
-  if (topicKey === "annual-leave" && state.selectedAward.code === "MA000010") {
-    const clause = clauses.find((item) => item.id === "clause-34");
-    selectClause("clause-34", topic.query);
-    summariseClause(clause);
-    return;
-  }
-
-  await searchOfficialAwardText(topic.query, topic.label);
+  jumpAwardViewer(topic);
 }
 
 function selectAward(code) {
@@ -781,16 +804,15 @@ function selectAward(code) {
   renderPayRatePlaceholder();
   renderAwardResults();
   renderClauses();
-  setView("clauses");
+  setView("official");
 
   if (award.code === "MA000010") {
     summariseClause(clauses.find((clause) => clause.id === "clause-34"));
-    requestAnimationFrame(() => selectClause("clause-34", "annual leave clause"));
   } else {
     answerTitle.textContent = "Award selected";
     answerBody.innerHTML = `
       <p>${escapeHtml(award.title)} is selected from the Fair Work A-Z awards catalogue.</p>
-      <p>Ask a clause question such as "annual leave clause", "ordinary hours", "allowances", or "classification" to search the official award text.</p>
+      <p>The full official award is loading in the embedded viewer. Use the shortcut buttons to jump to common sections.</p>
     `;
   }
 
@@ -807,6 +829,27 @@ function boot() {
   requestAnimationFrame(() => selectClause("clause-34", "annual leave clause"));
 
   awardSearch.addEventListener("input", renderAwardResults);
+  industryFilterButton.addEventListener("click", toggleIndustryFilter);
+  awardHtmlFrame.addEventListener("load", () => {
+    if (state.pendingViewerJump) {
+      sendAwardViewerJump(state.pendingViewerJump);
+      state.pendingViewerJump = null;
+    }
+  });
+
+  window.addEventListener("message", (event) => {
+    if (!event.data || event.data.type !== "award-jump-result") {
+      return;
+    }
+
+    if (event.data.found) {
+      answerBody.innerHTML = `<p>Highlighted: ${escapeHtml(event.data.text || event.data.topic)}.</p>`;
+      return;
+    }
+
+    answerBody.innerHTML = `<p>I could not find a clear ${escapeHtml(event.data.topic || "section")} heading in the embedded award. Try the official browser find command or ask the award question box.</p>`;
+  });
+
   awardResults.addEventListener("click", (event) => {
     const button = event.target.closest("[data-award]");
     if (!button) {
