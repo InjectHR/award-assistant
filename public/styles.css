@@ -180,6 +180,9 @@ button:focus-visible {
   display: grid;
   gap: 8px;
   margin-top: 12px;
+  max-height: 470px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .award-result {
@@ -322,11 +325,29 @@ button:focus-visible {
 
 .viewer-content,
 .official-view,
-.rates-view {
+.rates-view,
+.pay-guide-view {
   height: calc(100vh - 190px);
   min-height: 620px;
   overflow: auto;
   background: #fbfcfd;
+}
+
+.pay-guide-view iframe {
+  display: block;
+  width: 100%;
+  height: calc(100% - 42px);
+  min-height: 578px;
+  border: 0;
+  background: #fff;
+}
+
+.frame-note {
+  margin: 0;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .clause-card {
@@ -533,7 +554,8 @@ button:focus-visible {
 
   .viewer-content,
   .official-view,
-  .rates-view {
+  .rates-view,
+  .pay-guide-view {
     height: 680px;
   }
 }
@@ -555,10 +577,15 @@ button:focus-visible {
 
   .viewer-content,
   .official-view,
-  .rates-view {
+  .rates-view,
+  .pay-guide-view {
     height: auto;
     min-height: 0;
     max-height: none;
+  }
+
+  .pay-guide-view iframe {
+    min-height: 620px;
   }
 
   .rates-toolbar,

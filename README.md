@@ -4,9 +4,9 @@ Small custom web app for searching the Fair Work A-Z awards catalogue, opening a
 
 Manufacturing Award MA000010 is included as a richer worked example with curated annual leave, pay-rate and classification cards. Other awards are selectable from the catalogue and searched through their official `awards.fairwork.gov.au/{awardCode}.html` source by the local server.
 
-Each selected award also exposes quick links to the Fair Work pay guide PDF and DOCX using the official calculator download endpoint.
+Each selected award also exposes quick links to the Fair Work pay guide PDF and DOCX using the official calculator download endpoint, plus an in-app pay guide viewer.
 
-The viewer includes top jump buttons for ordinary hours, overtime, penalty rates, annual leave and classifications.
+The viewer includes top jump buttons for ordinary hours, overtime, penalty rates, annual leave and classifications. These try to match a clause heading first, then fall back to broader text search.
 
 ## Run
 

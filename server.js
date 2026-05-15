@@ -126,12 +126,70 @@ function getQueryTerms(query) {
     .filter((term) => term.length > 3);
 }
 
-function findAwardTextMatches(text, query) {
+function toSearchLine(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function likelyHeading(line) {
+  if (line.length > 170) {
+    return false;
+  }
+
+  return (
+    /^(\d+[A-Z]?(?:\.\d+)?|Schedule\s+[A-Z])\.?\s+/i.test(line) ||
+    /^[A-Z][A-Za-z,&()/ -]{2,120}$/.test(line)
+  );
+}
+
+function topicNeedles(topic, query) {
+  const wanted = toSearchLine(topic || query);
+  const known = {
+    "ordinary hours": [["ordinary", "hours"], ["ordinary", "hours", "work"]],
+    overtime: [["overtime"]],
+    "penalty rates": [["penalty", "rates"], ["penalties"], ["weekend", "penalty"]],
+    "annual leave": [["annual", "leave"]],
+    classifications: [["classifications"], ["classification", "structure"], ["classification", "definitions"]]
+  };
+
+  return known[wanted] || [getQueryTerms(wanted)];
+}
+
+function buildMatch(lines, item, resultIndex) {
+  const context = lines.slice(item.index, item.index + 8);
+  const heading = item.line;
+  return {
+    id: `official-match-${resultIndex + 1}`,
+    number: heading.match(/^(\d+[A-Z]?(?:\.\d+)?|Schedule\s+[A-Z])/i)?.[1] || `Match ${resultIndex + 1}`,
+    title: heading.replace(/^(\d+[A-Z]?(?:\.\d+)?|Schedule\s+[A-Z])\.?\s*/i, "").slice(0, 140),
+    body: context.slice(0, 8)
+  };
+}
+
+function findAwardTextMatches(text, query, topic = "") {
   const terms = getQueryTerms(query);
   const lines = text
     .split(/\n+/)
     .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter((line) => line.length > 20);
+    .filter((line) => line.length > 2);
+
+  const headingMatches = lines
+    .map((line, index) => ({ line, index, lower: toSearchLine(line) }))
+    .filter((item) => likelyHeading(item.line))
+    .map((item) => {
+      const needles = topicNeedles(topic, query);
+      const score = needles.reduce((best, termsForNeedle) => {
+        const matched = termsForNeedle.every((term) => item.lower.includes(term));
+        return matched ? Math.max(best, termsForNeedle.length + 5) : best;
+      }, 0);
+      return { ...item, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, 3);
+
+  if (headingMatches.length) {
+    return headingMatches.map((item, index) => buildMatch(lines, item, index));
+  }
 
   const scored = lines
     .map((line, index) => {
@@ -158,6 +216,7 @@ function findAwardTextMatches(text, query) {
 async function searchAwardText(requestUrl, res) {
   const code = (requestUrl.searchParams.get("code") || "").toUpperCase();
   const query = requestUrl.searchParams.get("q") || "";
+  const topic = requestUrl.searchParams.get("topic") || "";
 
   if (!/^MA\d{6}$/.test(code)) {
     json(res, 400, {
@@ -195,13 +254,14 @@ async function searchAwardText(requestUrl, res) {
 
     const html = await response.text();
     const text = htmlToSearchableText(html);
-    const matches = findAwardTextMatches(text, query);
+    const matches = findAwardTextMatches(text, query, topic);
 
     json(res, 200, {
       connected: true,
       source: url,
       awardCode: code,
       query,
+      topic,
       matches
     });
   } catch (error) {
@@ -337,6 +397,54 @@ async function testFwcApi(res) {
   }
 }
 
+async function proxyPayGuide(requestUrl, res) {
+  const awardCode = (requestUrl.searchParams.get("awardCode") || "MA000010").toUpperCase();
+
+  if (!/^MA\d{6}$/.test(awardCode)) {
+    json(res, 400, {
+      connected: false,
+      message: "Award code must look like MA000010."
+    });
+    return;
+  }
+
+  const target = new URL("https://calculate.fairwork.gov.au/Download/AwardSummary");
+  target.searchParams.set("awardCode", awardCode.toLowerCase());
+  target.searchParams.set("fileType", "pdf");
+
+  try {
+    const response = await fetch(target, {
+      headers: {
+        Accept: "application/pdf"
+      }
+    });
+
+    if (!response.ok) {
+      json(res, response.status, {
+        connected: false,
+        source: target.toString(),
+        message: `The Fair Work pay guide returned ${response.status}.`
+      });
+      return;
+    }
+
+    const bytes = Buffer.from(await response.arrayBuffer());
+    res.writeHead(200, {
+      "Content-Type": response.headers.get("content-type") || "application/pdf",
+      "Content-Disposition": `inline; filename="${awardCode.toLowerCase()}-pay-guide.pdf"`,
+      "Cache-Control": "private, max-age=3600"
+    });
+    res.end(bytes);
+  } catch (error) {
+    json(res, 502, {
+      connected: false,
+      source: target.toString(),
+      message: "The Fair Work pay guide could not be loaded into the viewer.",
+      error: error.message
+    });
+  }
+}
+
 async function serveStatic(req, res) {
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
   let pathname = decodeURIComponent(requestUrl.pathname);
@@ -395,6 +503,11 @@ const server = http.createServer(async (req, res) => {
 
   if (requestUrl.pathname === "/api/fwc-test") {
     await testFwcApi(res);
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/pay-guide") {
+    await proxyPayGuide(requestUrl, res);
     return;
   }
 

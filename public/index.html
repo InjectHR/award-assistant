@@ -24,7 +24,7 @@
       <aside class="library-panel" aria-label="Award picker">
         <section class="panel-section">
           <label class="field-label" for="awardSearch">Award picker/search all awards</label>
-          <input id="awardSearch" class="search-input" type="search" value="Manufacturing Award" autocomplete="off">
+          <input id="awardSearch" class="search-input" type="search" placeholder="Search or scroll all awards" autocomplete="off">
           <div id="awardResults" class="award-results" aria-live="polite"></div>
         </section>
 
@@ -42,6 +42,7 @@
 
         <section class="panel-section">
           <h2>Related tools</h2>
+          <button class="soft-button" type="button" data-action="view-pay-guide">View pay guide</button>
           <a id="payGuidePdfLink" class="soft-button link-button" href="https://calculate.fairwork.gov.au/Download/AwardSummary?awardCode=ma000010&fileType=pdf" target="_blank" rel="noreferrer">Pay guide PDF</a>
           <a id="payGuideDocxLink" class="soft-button link-button" href="https://calculate.fairwork.gov.au/Download/AwardSummary?awardCode=ma000010&fileType=docx" target="_blank" rel="noreferrer">Pay guide DOCX</a>
           <button class="soft-button" type="button" data-action="check-classifications">Check classifications</button>
@@ -60,6 +61,7 @@
             <button class="tab is-active" type="button" data-view="clauses">Clauses</button>
             <button class="tab" type="button" data-view="official">Official page</button>
             <button class="tab" type="button" data-view="rates">Rates</button>
+            <button class="tab" type="button" data-view="payGuide">Pay guide</button>
           </div>
         </div>
 
@@ -95,6 +97,18 @@
             <button id="rateLookupButton" class="primary-button" type="button">Check pay rates</button>
           </div>
           <div id="payRateOutput" class="rate-output" aria-live="polite"></div>
+        </div>
+
+        <div id="payGuideView" class="pay-guide-view" hidden>
+          <iframe
+            id="payGuideFrame"
+            title="Pay guide viewer"
+            src="/api/pay-guide?awardCode=MA000010"
+            loading="lazy"
+          ></iframe>
+          <p class="frame-note">
+            If the PDF viewer does not load in your browser, use the pay guide PDF button in the sidebar.
+          </p>
         </div>
       </section>
 

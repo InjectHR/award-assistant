@@ -123,6 +123,7 @@ const awardResults = document.querySelector("#awardResults");
 const clauseView = document.querySelector("#clauseView");
 const officialView = document.querySelector("#officialView");
 const ratesView = document.querySelector("#ratesView");
+const payGuideView = document.querySelector("#payGuideView");
 const tabs = document.querySelectorAll(".tab");
 const questionInput = document.querySelector("#questionInput");
 const askButton = document.querySelector("#askButton");
@@ -142,27 +143,28 @@ const officialSourceTitle = document.querySelector("#officialSourceTitle");
 const officialPageOpenLink = document.querySelector("#officialPageOpenLink");
 const officialPagePdfLink = document.querySelector("#officialPagePdfLink");
 const officialPagePayGuideLink = document.querySelector("#officialPagePayGuideLink");
+const payGuideFrame = document.querySelector("#payGuideFrame");
 
 const jumpTopics = {
   "ordinary-hours": {
     label: "Ordinary hours",
-    query: "ordinary hours clause"
+    query: "ordinary hours"
   },
   overtime: {
     label: "Overtime",
-    query: "overtime clause"
+    query: "overtime"
   },
   "penalty-rates": {
     label: "Penalty rates",
-    query: "penalty rates clause"
+    query: "penalty rates"
   },
   "annual-leave": {
     label: "Annual leave",
-    query: "annual leave clause"
+    query: "annual leave"
   },
   classifications: {
     label: "Classifications",
-    query: "classifications schedule"
+    query: "classifications"
   }
 };
 
@@ -180,6 +182,10 @@ function payGuideUrl(fileType, award = state.selectedAward) {
     fileType
   });
   return `https://calculate.fairwork.gov.au/Download/AwardSummary?${params.toString()}`;
+}
+
+function payGuideViewerUrl(award = state.selectedAward) {
+  return `/api/pay-guide?awardCode=${encodeURIComponent(award.code)}`;
 }
 
 function escapeHtml(value) {
@@ -222,6 +228,7 @@ function renderAwardMeta() {
   officialPageOpenLink.textContent = `Open ${award.code} award`;
   officialPagePdfLink.href = awardPdfUrl(award);
   officialPagePayGuideLink.href = payGuideUrl("pdf", award);
+  payGuideFrame.src = payGuideViewerUrl(award);
   document.querySelector("#viewerTitle").textContent = award.title;
 }
 
@@ -237,7 +244,7 @@ function renderAwardResults() {
       .join(" ")
       .toLowerCase();
     return !query || haystack.includes(query) || terms.every((term) => haystack.includes(term));
-  }).slice(0, 40);
+  });
 
   awardResults.innerHTML = matches
     .map(
@@ -338,11 +345,26 @@ function renderClassificationOptions() {
   classificationSelect.value = "C10 / V5";
 }
 
+function renderPayRatePlaceholder() {
+  payRateOutput.dataset.awardCode = state.selectedAward.code;
+  payRateOutput.innerHTML = `
+    <p class="api-note">
+      Ready to check rates for <strong>${escapeHtml(state.selectedAward.code)}</strong>.
+      Use the button above to query the FWC Modern Awards Pay Database for the selected award.
+    </p>
+  `;
+}
+
 function setView(view) {
   state.currentView = view;
   clauseView.hidden = view !== "clauses";
   officialView.hidden = view !== "official";
   ratesView.hidden = view !== "rates";
+  payGuideView.hidden = view !== "payGuide";
+
+  if (view === "rates" && payRateOutput.dataset.awardCode !== state.selectedAward.code) {
+    renderPayRatePlaceholder();
+  }
 
   tabs.forEach((tab) => {
     tab.classList.toggle("is-active", tab.dataset.view === view);
@@ -430,7 +452,7 @@ async function askAward() {
   summariseClause(clause);
 }
 
-async function searchOfficialAwardText(query) {
+async function searchOfficialAwardText(query, topic = "") {
   state.isLoadingAwardText = true;
   state.lastSearchTerm = query;
   renderClauses();
@@ -441,7 +463,8 @@ async function searchOfficialAwardText(query) {
   try {
     const params = new URLSearchParams({
       code: state.selectedAward.code,
-      q: query
+      q: query,
+      topic
     });
     const response = await fetch(`/api/award-search?${params.toString()}`);
     const payload = await response.json();
@@ -577,6 +600,7 @@ async function checkPayRates() {
   }
   setView("rates");
   const classification = state.selectedAward.code === "MA000010" ? classificationSelect.value || "C10 / V5" : "";
+  payRateOutput.dataset.awardCode = state.selectedAward.code;
   payRateOutput.innerHTML = `<p class="api-note">Checking rates for ${escapeHtml(state.selectedAward.code)}${classification ? ` / ${escapeHtml(classification)}` : ""}...</p>`;
 
   try {
@@ -631,6 +655,7 @@ function renderRates(payload, rates) {
     ${rateTable(rows)}
     <p class="source-note">Always reconcile against the current award and the <a href="${officialSources.mapd}" target="_blank" rel="noreferrer">FWC Modern Awards Pay Database</a>.</p>
   `;
+  payRateOutput.dataset.awardCode = state.selectedAward.code;
 
   answerTitle.textContent = "Pay rates";
   answerBody.innerHTML = `
@@ -710,6 +735,9 @@ function handleAction(action) {
   if (action === "check-pay-rates") {
     checkPayRates();
   }
+  if (action === "view-pay-guide") {
+    setView("payGuide");
+  }
 }
 
 async function jumpToTopic(topicKey) {
@@ -732,7 +760,7 @@ async function jumpToTopic(topicKey) {
     return;
   }
 
-  await searchOfficialAwardText(topic.query);
+  await searchOfficialAwardText(topic.query, topic.label);
 }
 
 function selectAward(code) {
@@ -750,6 +778,7 @@ function selectAward(code) {
 
   renderAwardMeta();
   renderClassificationOptions();
+  renderPayRatePlaceholder();
   renderAwardResults();
   renderClauses();
   setView("clauses");
@@ -772,6 +801,7 @@ function boot() {
   renderAwardMeta();
   renderAwardResults();
   renderClassificationOptions();
+  renderPayRatePlaceholder();
   renderClauses();
   summariseClause(clauses.find((clause) => clause.id === "clause-34"));
   requestAnimationFrame(() => selectClause("clause-34", "annual leave clause"));
