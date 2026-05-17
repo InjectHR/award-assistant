@@ -119,10 +119,12 @@ function htmlToSearchableText(html) {
   ).trim();
 }
 
-function awardViewerScript() {
+function awardViewerScript(code) {
   return `
     <script>
       (function () {
+        var awardCode = ${JSON.stringify(code)};
+        var officialOrigin = "https://awards.fairwork.gov.au";
         var topicTerms = {
           "ordinary hours": [["ordinary", "hours"]],
           "overtime": [["overtime"]],
@@ -137,6 +139,58 @@ function awardViewerScript() {
 
         function visibleText(element) {
           return String(element.textContent || "").replace(/\\s+/g, " ").trim();
+        }
+
+        function findAnchorTarget(hash) {
+          if (!hash || hash === "#") return null;
+          var id = decodeURIComponent(hash.slice(1));
+          return document.getElementById(id) || document.getElementsByName(id)[0];
+        }
+
+        function scrollToAnchor(hash) {
+          var target = findAnchorTarget(hash);
+          if (!target) return false;
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          target.classList.add("award-assistant-highlight");
+          window.setTimeout(function () {
+            target.classList.remove("award-assistant-highlight");
+          }, 2600);
+          return true;
+        }
+
+        function handleAwardLinks() {
+          document.addEventListener("click", function (event) {
+            var link = event.target && event.target.closest ? event.target.closest("a[href]") : null;
+            if (!link) return;
+
+            var rawHref = link.getAttribute("href") || "";
+            if (!rawHref || rawHref.indexOf("javascript:") === 0 || rawHref.indexOf("mailto:") === 0) {
+              return;
+            }
+
+            if (rawHref.charAt(0) === "#") {
+              event.preventDefault();
+              scrollToAnchor(rawHref);
+              return;
+            }
+
+            var url;
+            try {
+              url = new URL(rawHref, officialOrigin + "/" + awardCode + ".html");
+            } catch (error) {
+              return;
+            }
+
+            var isSameAward = url.hostname === "awards.fairwork.gov.au" && url.pathname.toLowerCase().endsWith("/" + awardCode.toLowerCase() + ".html");
+            if (isSameAward && url.hash) {
+              event.preventDefault();
+              scrollToAnchor(url.hash);
+              return;
+            }
+
+            event.preventDefault();
+            window.open(url.href, "_blank", "noopener,noreferrer");
+          });
         }
 
         function scoreCandidate(element, query, topic) {
@@ -193,6 +247,8 @@ function awardViewerScript() {
             jumpToAwardTopic(event.data);
           }
         });
+
+        handleAwardLinks();
       })();
     </script>
   `;
@@ -219,7 +275,7 @@ function makeEmbeddableAwardHtml(html, code) {
     ? safeHtml.replace("</head>", `${base}${viewerCss}</head>`)
     : `${base}${viewerCss}${safeHtml}`;
 
-  const script = awardViewerScript();
+  const script = awardViewerScript(code);
   return withHead.includes("</body>")
     ? withHead.replace("</body>", `${script}</body>`)
     : `${withHead}${script}`;
