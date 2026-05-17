@@ -130,7 +130,7 @@ function awardViewerScript(code) {
           "overtime": [["overtime"]],
           "penalty rates": [["penalty", "rates"], ["penalties"]],
           "annual leave": [["annual", "leave"]],
-          "classifications": [["classification"], ["classifications"]]
+          "classifications": [["schedule", "a"], ["classification"], ["classifications"]]
         };
 
         function normalise(value) {
@@ -174,6 +174,20 @@ function awardViewerScript(code) {
           return false;
         }
 
+        function nextBodyText(element) {
+          var parts = [];
+          var current = element;
+          for (var i = 0; i < 8; i += 1) {
+            current = current.nextElementSibling;
+            if (!current) break;
+            var text = visibleText(current);
+            if (text && !isMostlyLinkText(current, text)) {
+              parts.push(text);
+            }
+          }
+          return normalise(parts.join(" "));
+        }
+
         function findAnchorTarget(hash) {
           if (!hash || hash === "#") return null;
           var id = decodeURIComponent(hash.slice(1));
@@ -189,6 +203,58 @@ function awardViewerScript(code) {
             target.classList.remove("award-assistant-highlight");
           }, 2600);
           return true;
+        }
+
+        function internalHashFromLink(link) {
+          var rawHref = link.getAttribute("href") || "";
+          if (!rawHref || rawHref.indexOf("javascript:") === 0 || rawHref.indexOf("mailto:") === 0) {
+            return "";
+          }
+
+          if (rawHref.charAt(0) === "#") {
+            return rawHref;
+          }
+
+          try {
+            var url = new URL(rawHref, officialOrigin + "/" + awardCode + ".html");
+            var isSameAward = url.hostname === "awards.fairwork.gov.au" && url.pathname.toLowerCase().endsWith("/" + awardCode.toLowerCase() + ".html");
+            return isSameAward && url.hash ? url.hash : "";
+          } catch (error) {
+            return "";
+          }
+        }
+
+        function buildAwardSidebar() {
+          var seen = {};
+          var items = [];
+          Array.prototype.slice.call(document.querySelectorAll("a[href]")).forEach(function (link) {
+            var hash = internalHashFromLink(link);
+            var text = visibleText(link);
+            if (!hash || seen[hash] || !text || text.length < 3 || text.length > 90) return;
+            if (!findAnchorTarget(hash)) return;
+            seen[hash] = true;
+            items.push({ hash: hash, text: text });
+          });
+
+          if (!items.length) return;
+
+          var sidebar = document.createElement("aside");
+          sidebar.className = "award-assistant-sidebar";
+          sidebar.setAttribute("aria-label", "Award contents");
+          sidebar.innerHTML = '<strong>Contents</strong>';
+
+          items.slice(0, 120).forEach(function (item) {
+            var button = document.createElement("button");
+            button.type = "button";
+            button.textContent = item.text;
+            button.addEventListener("click", function () {
+              scrollToAnchor(item.hash);
+            });
+            sidebar.appendChild(button);
+          });
+
+          document.body.classList.add("award-assistant-has-sidebar");
+          document.body.appendChild(sidebar);
         }
 
         function handleAwardLinks() {
@@ -247,11 +313,34 @@ function awardViewerScript(code) {
           return best - Math.min(text.length / 200, 1);
         }
 
+        function findScheduleAClassificationTarget() {
+          var candidates = Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,h5,h6,p,b,strong"));
+          return candidates
+            .map(function (element, index) {
+              var text = visibleText(element);
+              var normalised = normalise(text);
+              if (!text || text.length > 260 || isMostlyLinkText(element, text) || inLinkHeavyContainer(element)) {
+                return { element: element, index: index, score: 0 };
+              }
+
+              var following = nextBodyText(element);
+              var hasScheduleA = /(^|\\s)schedule\\s+a(\\s|$)/.test(normalised);
+              var mentionsClassifications = normalised.indexOf("classification") !== -1 || following.indexOf("classification") !== -1;
+              var score = hasScheduleA && mentionsClassifications ? 80 : 0;
+              if (hasBodyTextAfter(element)) score += 10;
+              return { element: element, index: index, score: score };
+            })
+            .filter(function (item) { return item.score > 0; })
+            .sort(function (a, b) { return b.score - a.score || a.index - b.index; })[0];
+        }
+
         function jumpToAwardTopic(payload) {
           var query = payload.query || payload.topic || "";
           var topic = payload.topic || query;
           var candidates = Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,h5,h6,p,b,strong"));
-          var best = candidates
+          var best = normalise(topic) === "classifications" ? findScheduleAClassificationTarget() : null;
+
+          best = best || candidates
             .map(function (element, index) {
               return { element: element, index: index, score: scoreCandidate(element, query, topic) };
             })
@@ -284,6 +373,7 @@ function awardViewerScript(code) {
         });
 
         handleAwardLinks();
+        buildAwardSidebar();
       })();
     </script>
   `;
@@ -295,10 +385,63 @@ function makeEmbeddableAwardHtml(html, code) {
       html { scroll-behavior: smooth; }
       body { padding: 18px; }
       a[target="_blank"]::after { content: ""; }
+      body.award-assistant-has-sidebar { padding-left: 286px !important; }
+      .award-assistant-sidebar {
+        position: fixed;
+        z-index: 2147483647;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 250px;
+        overflow-y: auto;
+        padding: 14px 12px;
+        border-right: 1px solid #dbe3e8;
+        background: #f7fafb;
+        box-shadow: 8px 0 18px rgba(29, 38, 48, 0.08);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      .award-assistant-sidebar strong {
+        display: block;
+        margin: 0 0 10px;
+        color: #62717f;
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .award-assistant-sidebar button {
+        display: block;
+        width: 100%;
+        margin: 0 0 4px;
+        padding: 7px 8px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: #1d2630;
+        font: inherit;
+        font-size: 13px;
+        line-height: 1.25;
+        text-align: left;
+        cursor: pointer;
+      }
+      .award-assistant-sidebar button:hover,
+      .award-assistant-sidebar button:focus {
+        outline: none;
+        background: #e8f0f4;
+      }
       .award-assistant-highlight {
         background: #fff0a6 !important;
         box-shadow: 0 0 0 4px rgba(255, 240, 166, 0.85) !important;
         border-radius: 4px !important;
+      }
+      @media (max-width: 780px) {
+        body.award-assistant-has-sidebar { padding-left: 18px !important; padding-top: 210px !important; }
+        .award-assistant-sidebar {
+          right: 0;
+          bottom: auto;
+          width: auto;
+          max-height: 180px;
+          border-right: 0;
+          border-bottom: 1px solid #dbe3e8;
+        }
       }
     </style>
   `;
