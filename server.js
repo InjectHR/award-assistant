@@ -141,6 +141,39 @@ function awardViewerScript(code) {
           return String(element.textContent || "").replace(/\\s+/g, " ").trim();
         }
 
+        function linkTextLength(element) {
+          return Array.prototype.slice.call(element.querySelectorAll("a")).reduce(function (total, link) {
+            return total + visibleText(link).length;
+          }, 0);
+        }
+
+        function isMostlyLinkText(element, text) {
+          if (element.tagName === "A" || element.closest("a")) return true;
+          if (!element.querySelector("a")) return false;
+          return linkTextLength(element) / Math.max(text.length, 1) > 0.55;
+        }
+
+        function inLinkHeavyContainer(element) {
+          var container = element.closest("nav, ul, ol, table, [role='navigation']");
+          if (!container) return false;
+          var linkCount = container.querySelectorAll("a").length;
+          if (linkCount < 5) return false;
+          return linkTextLength(container) / Math.max(visibleText(container).length, 1) > 0.5;
+        }
+
+        function hasBodyTextAfter(element) {
+          var current = element;
+          for (var i = 0; i < 6; i += 1) {
+            current = current.nextElementSibling;
+            if (!current) return false;
+            var text = visibleText(current);
+            if (text.length > 80 && !isMostlyLinkText(current, text)) {
+              return true;
+            }
+          }
+          return false;
+        }
+
         function findAnchorTarget(hash) {
           if (!hash || hash === "#") return null;
           var id = decodeURIComponent(hash.slice(1));
@@ -196,6 +229,7 @@ function awardViewerScript(code) {
         function scoreCandidate(element, query, topic) {
           var text = visibleText(element);
           if (!text || text.length > 260) return 0;
+          if (isMostlyLinkText(element, text) || inLinkHeavyContainer(element)) return 0;
           var normalised = normalise(text);
           var groups = topicTerms[normalise(topic)] || [normalise(query).split(" ").filter(Boolean)];
           var best = 0;
@@ -209,13 +243,14 @@ function awardViewerScript(code) {
           if (!best) return 0;
           if (/^(\\d+[A-Z]?(?:\\.\\d+)?|Schedule\\s+[A-Z])\\.?\\s+/i.test(text)) best += 12;
           if (/^(H[1-6]|B|STRONG)$/i.test(element.tagName)) best += 6;
+          if (hasBodyTextAfter(element)) best += 10;
           return best - Math.min(text.length / 200, 1);
         }
 
         function jumpToAwardTopic(payload) {
           var query = payload.query || payload.topic || "";
           var topic = payload.topic || query;
-          var candidates = Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,h5,h6,p,li,b,strong,td,div"));
+          var candidates = Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,h5,h6,p,b,strong"));
           var best = candidates
             .map(function (element, index) {
               return { element: element, index: index, score: scoreCandidate(element, query, topic) };
