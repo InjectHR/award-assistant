@@ -144,29 +144,6 @@ const payGuideDocxLink = document.querySelector("#payGuideDocxLink");
 const awardHtmlFrame = document.querySelector("#awardHtmlFrame");
 const payGuideFrame = document.querySelector("#payGuideFrame");
 
-const jumpTopics = {
-  "ordinary-hours": {
-    label: "Ordinary hours",
-    query: "ordinary hours"
-  },
-  overtime: {
-    label: "Overtime",
-    query: "overtime"
-  },
-  "penalty-rates": {
-    label: "Penalty rates",
-    query: "penalty rates"
-  },
-  "annual-leave": {
-    label: "Annual leave",
-    query: "annual leave"
-  },
-  classifications: {
-    label: "Classifications",
-    query: "classifications"
-  }
-};
-
 function awardHtmlUrl(award = state.selectedAward) {
   return `https://awards.fairwork.gov.au/${award.code}.html`;
 }
@@ -379,32 +356,6 @@ function setView(view) {
   tabs.forEach((tab) => {
     tab.classList.toggle("is-active", tab.dataset.view === view);
   });
-}
-
-function sendAwardViewerJump(topic) {
-  if (!topic || !awardHtmlFrame.contentWindow) {
-    return;
-  }
-
-  awardHtmlFrame.contentWindow.postMessage(
-    {
-      type: "award-jump",
-      topic: topic.label,
-      query: topic.query
-    },
-    "*"
-  );
-}
-
-function jumpAwardViewer(topic) {
-  state.pendingViewerJump = topic;
-  setView("official");
-  answerTitle.textContent = topic.label;
-  answerBody.innerHTML = `
-    <p>Opened ${escapeHtml(state.selectedAward.code)} in the award viewer and highlighted the first matching ${escapeHtml(topic.label.toLowerCase())} heading I could find.</p>
-  `;
-
-  window.setTimeout(() => sendAwardViewerJump(topic), 150);
 }
 
 function scoreClause(clause, query) {
@@ -776,16 +727,6 @@ function handleAction(action) {
   }
 }
 
-async function jumpToTopic(topicKey) {
-  const topic = jumpTopics[topicKey];
-  if (!topic) {
-    return;
-  }
-
-  questionInput.value = topic.query;
-  jumpAwardViewer(topic);
-}
-
 function selectAward(code) {
   const award = awardLibrary.find((item) => item.code === code);
   if (!award) {
@@ -812,7 +753,7 @@ function selectAward(code) {
     answerTitle.textContent = "Award selected";
     answerBody.innerHTML = `
       <p>${escapeHtml(award.title)} is selected from the Fair Work A-Z awards catalogue.</p>
-      <p>The full official award is loading in the embedded viewer. Use the shortcut buttons to jump to common sections.</p>
+      <p>The full official award is loading in the embedded viewer. Use the contents sidebar inside the viewer to move through the award.</p>
     `;
   }
 
@@ -830,25 +771,6 @@ function boot() {
 
   awardSearch.addEventListener("input", renderAwardResults);
   industryFilterButton.addEventListener("click", toggleIndustryFilter);
-  awardHtmlFrame.addEventListener("load", () => {
-    if (state.pendingViewerJump) {
-      sendAwardViewerJump(state.pendingViewerJump);
-      state.pendingViewerJump = null;
-    }
-  });
-
-  window.addEventListener("message", (event) => {
-    if (!event.data || event.data.type !== "award-jump-result") {
-      return;
-    }
-
-    if (event.data.found) {
-      answerBody.innerHTML = `<p>Highlighted: ${escapeHtml(event.data.text || event.data.topic)}.</p>`;
-      return;
-    }
-
-    answerBody.innerHTML = `<p>I could not find a clear ${escapeHtml(event.data.topic || "section")} heading in the embedded award. Try the official browser find command or ask the award question box.</p>`;
-  });
 
   awardResults.addEventListener("click", (event) => {
     const button = event.target.closest("[data-award]");
@@ -870,12 +792,6 @@ function boot() {
   });
 
   document.addEventListener("click", (event) => {
-    const jumpButton = event.target.closest("[data-jump]");
-    if (jumpButton) {
-      jumpToTopic(jumpButton.dataset.jump);
-      return;
-    }
-
     const actionButton = event.target.closest("[data-action]");
     if (!actionButton) {
       return;

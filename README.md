@@ -6,7 +6,7 @@ Manufacturing Award MA000010 is included as a richer worked example with curated
 
 Each selected award also exposes quick links to the Fair Work pay guide PDF and DOCX using the official calculator download endpoint, plus an in-app pay guide viewer.
 
-The viewer loads the selected official award HTML through the app, so the browser can display it inline and the top jump buttons can scroll/highlight headings for ordinary hours, overtime, penalty rates, annual leave and classifications.
+The viewer loads the selected official award HTML through the app, so the browser can display it inline with an in-viewer contents sidebar for moving through the award.
 
 ## Run
 
