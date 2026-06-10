@@ -1,1 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Award Assistant</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Fair Work / FWC award library</p>
+        <h1>Award Assistant</h1>
+      </div>
+    </header>
 
+    <main class="layout">
+      <aside class="panel">
+        <h2>Award picker</h2>
+        <input id="awardSearch" type="search" placeholder="Search awards, e.g. clerks, retail, manufacturing">
+        <div id="awardResults"></div>
+      </aside>
+
+      <section class="panel viewer">
+        <h2 id="viewerTitle">Select an award to begin</h2>
+
+        <div class="search-row">
+          <textarea id="questionInput" placeholder="Ask about annual leave, classifications, overtime, penalties..."></textarea>
+          <button id="askButton">Search selected award</button>
+        </div>
+
+        <div id="answerBody">
+          Select an award from the left, then search within that award.
+        </div>
+      </section>
+    </main>
+
+    <script src="/awards.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
