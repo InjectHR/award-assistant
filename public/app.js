@@ -807,6 +807,52 @@ function renderRates(payload, rates) {
 
 function rateTable(rates) {
   if (!rates.length) {
+    return `<p>No rates returned for this award.</p>`;
+  }
+
+  return `
+    <table class="rate-table">
+      <thead>
+        <tr>
+          <th>Classification</th>
+          <th>Hourly Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rates
+          .map((rate) => {
+            const classification =
+              rate.classification ||
+              rate.parent_classification_name ||
+              rate.classificationLevel ||
+              rate.name ||
+              "Unknown";
+
+            const hourlyRate =
+              rate.calculated_rate ??
+              rate.hourly ??
+              rate.hourly_rate ??
+              rate.hourlyRate ??
+              rate.ordinaryHourlyRate ??
+              rate.ordinary_hourly_rate ??
+              rate.rate ??
+              "";
+
+            return hourlyRate
+              ? `
+                <tr>
+                  <td>${escapeHtml(classification)}</td>
+                  <td>${escapeHtml(String(hourlyRate))}</td>
+                </tr>
+              `
+              : "";
+          })
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+  if (!rates.length) {
     return `<p>No rates returned for this filter.</p>`;
   }
 
