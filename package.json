@@ -4,9 +4,14 @@
   "private": true,
   "description": "Small Award Assistant web app for Fair Work/FWC award lookup, clause search, and pay-rate checks.",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "wrangler": "^4.99.0"
   }
 }
