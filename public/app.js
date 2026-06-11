@@ -830,11 +830,48 @@ function rateTable(rates) {
               rate.classificationLevel ||
               rate.name ||
               "Returned rate";
-            const baseRate = rate.base_rate ?? rate.weekly ?? rate.minimumWeeklyRate ?? rate.weekly_rate;
-            const calculatedRate =
-              rate.calculated_rate ?? rate.hourly ?? rate.minimumHourlyRate ?? rate.hourly_rate;
-            const baseLabel = rate.base_rate_type || "";
-            const calculatedLabel = rate.calculated_rate_type || "";
+          const baseRate =
+  rate.base_rate ??
+  rate.baseRate ??
+  rate.base_rate_amount ??
+  rate.baseRateAmount ??
+  rate.minimumWeeklyRate ??
+  rate.minimum_weekly_rate ??
+  rate.weekly ??
+  rate.weekly_rate ??
+  rate.weeklyRate ??
+  rate.rate ??
+  rate.amount;
+
+const calculatedRate =
+  rate.calculated_rate ??
+  rate.calculatedRate ??
+  rate.calculated_rate_amount ??
+  rate.calculatedRateAmount ??
+  rate.minimumHourlyRate ??
+  rate.minimum_hourly_rate ??
+  rate.hourly ??
+  rate.hourly_rate ??
+  rate.hourlyRate ??
+  rate.ordinaryHourlyRate ??
+  rate.ordinary_hourly_rate;
+
+const baseLabel =
+  rate.base_rate_type ??
+  rate.baseRateType ??
+  rate.rate_type ??
+  rate.rateType ??
+  rate.baseRateUnit ??
+  rate.unit ??
+  "";
+
+const calculatedLabel =
+  rate.calculated_rate_type ??
+  rate.calculatedRateType ??
+  rate.calculatedRateUnit ??
+  rate.hourlyRateType ??
+  rate.hourly_rate_type ??
+  "";
             return `
               <tr>
                 <td>${escapeHtml(classification)}</td>
