@@ -14,8 +14,6 @@ const awardLibrary = (window.awardLibrary || [
   }
 ]).sort((a, b) => a.title.localeCompare(b.title));
 
-const manufacturingAward = awardLibrary.find((award) => award.code === "MA000010") || awardLibrary[0];
-
 const payRateRows = [
   ["C14 / V1", 922.7, 24.28],
   ["C13 / V2", 948.0, 24.95],
@@ -110,12 +108,12 @@ const clauses = [
 ];
 
 const state = {
-  selectedAward: manufacturingAward,
-  selectedClauseId: "clause-34",
+  selectedAward: null,
+  selectedClauseId: "",
   dynamicClauses: [],
   isLoadingAwardText: false,
   hideIndustryAwards: false,
-  lastSearchTerm: "annual leave",
+  lastSearchTerm: "",
   currentView: "clauses"
 };
 
@@ -145,14 +143,23 @@ const awardHtmlFrame = document.querySelector("#awardHtmlFrame");
 const payGuideFrame = document.querySelector("#payGuideFrame");
 
 function awardHtmlUrl(award = state.selectedAward) {
+  if (!award) {
+    return officialSources.awardsList;
+  }
   return `https://awards.fairwork.gov.au/${award.code}.html`;
 }
 
 function awardPdfUrl(award = state.selectedAward) {
+  if (!award) {
+    return "";
+  }
   return `https://www.fwc.gov.au/documents/modern_awards/pdf/${award.code.toLowerCase()}.pdf`;
 }
 
 function payGuideUrl(fileType, award = state.selectedAward) {
+  if (!award) {
+    return "";
+  }
   const params = new URLSearchParams({
     awardCode: award.code.toLowerCase(),
     fileType
@@ -161,10 +168,16 @@ function payGuideUrl(fileType, award = state.selectedAward) {
 }
 
 function payGuideViewerUrl(award = state.selectedAward) {
+  if (!award) {
+    return "about:blank";
+  }
   return `/api/pay-guide?awardCode=${encodeURIComponent(award.code)}`;
 }
 
 function awardHtmlViewerUrl(award = state.selectedAward) {
+  if (!award) {
+    return "about:blank";
+  }
   return `/api/award-html?code=${encodeURIComponent(award.code)}`;
 }
 
@@ -191,24 +204,71 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => toast.classList.remove("is-visible"), 2400);
 }
 
+function setLinkEnabled(link, enabled, href = "") {
+  link.classList.toggle("is-disabled", !enabled);
+  link.setAttribute("aria-disabled", String(!enabled));
+  if (enabled) {
+    link.href = href;
+    return;
+  }
+  link.removeAttribute("href");
+}
+
+function setAwardControlsEnabled(enabled) {
+  askButton.disabled = !enabled;
+  rateLookupButton.disabled = !enabled;
+  classificationSelect.disabled = !enabled;
+
+  document.querySelectorAll("[data-action]").forEach((button) => {
+    button.disabled = !enabled;
+  });
+
+  tabs.forEach((tab) => {
+    if (tab.dataset.view !== "clauses") {
+      tab.disabled = !enabled;
+    }
+  });
+}
+
 function renderAwardMeta() {
   const award = state.selectedAward;
+  if (!award) {
+    currentAwardCode.textContent = "None selected";
+    currentAwardStatus.textContent = "Choose an award";
+    currentAwardUse.textContent = "Award lookup";
+    officialAwardLink.href = officialSources.awardsList;
+    officialAwardLink.textContent = "Select an award";
+    setLinkEnabled(payGuidePdfLink, false);
+    payGuidePdfLink.textContent = "Pay guide PDF";
+    setLinkEnabled(payGuideDocxLink, false);
+    payGuideDocxLink.textContent = "Pay guide DOCX";
+    awardHtmlFrame.src = "about:blank";
+    payGuideFrame.src = "about:blank";
+    document.querySelector("#viewerTitle").textContent = "Select an award";
+    setAwardControlsEnabled(false);
+    return;
+  }
+
   currentAwardCode.textContent = award.code;
   currentAwardStatus.textContent =
     award.code === "MA000010" ? "Curated clauses + official source" : "Official source searchable";
   currentAwardUse.textContent = "HR clause lookup";
   officialAwardLink.href = awardHtmlUrl(award);
   officialAwardLink.textContent = `${award.code} official award`;
-  payGuidePdfLink.href = payGuideUrl("pdf", award);
+  setLinkEnabled(payGuidePdfLink, true, payGuideUrl("pdf", award));
   payGuidePdfLink.textContent = `${award.code} pay guide PDF`;
-  payGuideDocxLink.href = payGuideUrl("docx", award);
+  setLinkEnabled(payGuideDocxLink, true, payGuideUrl("docx", award));
   payGuideDocxLink.textContent = `${award.code} pay guide DOCX`;
   awardHtmlFrame.src = awardHtmlViewerUrl(award);
   payGuideFrame.src = payGuideViewerUrl(award);
   document.querySelector("#viewerTitle").textContent = award.title;
+  setAwardControlsEnabled(true);
 }
 
 function activeClauses() {
+  if (!state.selectedAward) {
+    return [];
+  }
   return state.selectedAward.code === "MA000010" ? clauses : state.dynamicClauses;
 }
 
@@ -275,6 +335,16 @@ function escapeRegExp(value) {
 function renderClauses() {
   const list = activeClauses();
 
+  if (!state.selectedAward) {
+    clauseView.innerHTML = `
+      <article class="clause-card">
+        <h3>Select an award</h3>
+        <p>Search or scroll the award list, then choose an award to load the official award viewer.</p>
+      </article>
+    `;
+    return;
+  }
+
   if (state.isLoadingAwardText) {
     clauseView.innerHTML = `
       <article class="clause-card is-highlighted">
@@ -287,7 +357,7 @@ function renderClauses() {
 
   if (!list.length) {
     clauseView.innerHTML = `
-      <article class="clause-card is-highlighted">
+      <article class="clause-card">
         <h3>${escapeHtml(state.selectedAward.title)}</h3>
         <p>This award is selected from the Fair Work A-Z catalogue. Ask a clause question to search the official award text, or open the official page tab.</p>
         <p class="source-note">
@@ -320,6 +390,15 @@ function renderClauses() {
 }
 
 function renderClassificationOptions() {
+  if (!state.selectedAward) {
+    classificationSelect.innerHTML = `<option value="">Select an award first</option>`;
+    classificationSelect.value = "";
+    classificationSelect.disabled = true;
+    return;
+  }
+
+  classificationSelect.disabled = false;
+
   if (state.selectedAward.code !== "MA000010") {
     classificationSelect.innerHTML = `<option value="">Live MAPD lookup for selected award</option>`;
     classificationSelect.value = "";
@@ -333,6 +412,16 @@ function renderClassificationOptions() {
 }
 
 function renderPayRatePlaceholder() {
+  if (!state.selectedAward) {
+    payRateOutput.dataset.awardCode = "";
+    payRateOutput.innerHTML = `
+      <p class="api-note">
+        Select an award before checking pay rates.
+      </p>
+    `;
+    return;
+  }
+
   payRateOutput.dataset.awardCode = state.selectedAward.code;
   payRateOutput.innerHTML = `
     <p class="api-note">
@@ -343,13 +432,17 @@ function renderPayRatePlaceholder() {
 }
 
 function setView(view) {
+  if (!state.selectedAward && view !== "clauses") {
+    view = "clauses";
+  }
+
   state.currentView = view;
   clauseView.hidden = view !== "clauses";
   officialView.hidden = view !== "official";
   ratesView.hidden = view !== "rates";
   payGuideView.hidden = view !== "payGuide";
 
-  if (view === "rates" && payRateOutput.dataset.awardCode !== state.selectedAward.code) {
+  if (view === "rates" && state.selectedAward && payRateOutput.dataset.awardCode !== state.selectedAward.code) {
     renderPayRatePlaceholder();
   }
 
@@ -368,6 +461,10 @@ function scoreClause(clause, query) {
 
 function findBestClause(query) {
   const list = activeClauses();
+  if (!list.length) {
+    return null;
+  }
+
   if (/annual|leave|holiday|loading|shutdown|cash/i.test(query)) {
     return list.find((clause) => clause.id === "clause-34") || list[0];
   }
@@ -386,7 +483,7 @@ function findBestClause(query) {
 
   return list
     .map((clause) => ({ clause, score: scoreClause(clause, query) }))
-    .sort((a, b) => b.score - a.score)[0].clause;
+    .sort((a, b) => b.score - a.score)[0]?.clause || null;
 }
 
 function selectClause(clauseId, term = "") {
@@ -400,11 +497,25 @@ function selectClause(clauseId, term = "") {
 }
 
 function selectedClause() {
-  return activeClauses().find((clause) => clause.id === state.selectedClauseId) || activeClauses()[0] || clauses[0];
+  const list = activeClauses();
+  return list.find((clause) => clause.id === state.selectedClauseId) || list[0] || null;
 }
 
 async function askAward() {
-  const query = questionInput.value.trim() || "annual leave clause";
+  if (!state.selectedAward) {
+    answerTitle.textContent = "Select an award";
+    answerBody.innerHTML = `<p>Choose an award from the list first, then ask a question about that award.</p>`;
+    showToast("Select an award first");
+    return;
+  }
+
+  const query = questionInput.value.trim();
+  if (!query) {
+    answerTitle.textContent = "Ask the award";
+    answerBody.innerHTML = `<p>Enter a question after selecting an award.</p>`;
+    return;
+  }
+
   if (state.selectedAward.code !== "MA000010") {
     if (/compare|nes/i.test(query)) {
       compareWithNes();
@@ -423,6 +534,11 @@ async function askAward() {
   }
 
   const clause = findBestClause(query);
+  if (!clause) {
+    await searchOfficialAwardText(query);
+    return;
+  }
+
   selectClause(clause.id, query);
   if (/compare|nes/i.test(query)) {
     compareWithNes();
@@ -440,6 +556,12 @@ async function askAward() {
 }
 
 async function searchOfficialAwardText(query, topic = "") {
+  if (!state.selectedAward) {
+    answerTitle.textContent = "Select an award";
+    answerBody.innerHTML = `<p>Choose an award from the list first, then search for a clause.</p>`;
+    return;
+  }
+
   state.isLoadingAwardText = true;
   state.lastSearchTerm = query;
   renderClauses();
@@ -497,6 +619,12 @@ async function searchOfficialAwardText(query, topic = "") {
 }
 
 function summariseClause(clause = selectedClause()) {
+  if (!clause) {
+    answerTitle.textContent = "No clause selected";
+    answerBody.innerHTML = `<p>Ask a question or select a clause result before summarising.</p>`;
+    return;
+  }
+
   answerTitle.textContent = `${clause.number}. ${clause.title}`;
   if (clause.id === "clause-34") {
     answerBody.innerHTML = `
@@ -518,6 +646,13 @@ function summariseClause(clause = selectedClause()) {
 }
 
 async function compareWithNes() {
+  if (!state.selectedAward) {
+    answerTitle.textContent = "Select an award";
+    answerBody.innerHTML = `<p>Choose an award before comparing it with the NES.</p>`;
+    showToast("Select an award first");
+    return;
+  }
+
   if (state.selectedAward.code === "MA000010") {
     selectClause("clause-34", "annual leave NES");
   } else {
@@ -548,6 +683,13 @@ async function compareWithNes() {
 }
 
 function checkClassifications() {
+  if (!state.selectedAward) {
+    answerTitle.textContent = "Select an award";
+    answerBody.innerHTML = `<p>Choose an award before checking classifications.</p>`;
+    showToast("Select an award first");
+    return;
+  }
+
   if (state.selectedAward.code === "MA000010") {
     selectClause("schedule-a", "classification duties");
   } else {
@@ -582,6 +724,13 @@ function checkClassifications() {
 }
 
 async function checkPayRates() {
+  if (!state.selectedAward) {
+    answerTitle.textContent = "Select an award";
+    answerBody.innerHTML = `<p>Choose an award before checking pay rates.</p>`;
+    showToast("Select an award first");
+    return;
+  }
+
   if (state.selectedAward.code === "MA000010") {
     selectClause("clause-20", "minimum pay rates");
   }
@@ -628,6 +777,11 @@ function normaliseApiRates(data) {
 }
 
 function renderRates(payload, rates) {
+  if (!state.selectedAward) {
+    renderPayRatePlaceholder();
+    return;
+  }
+
   const hasManufacturingDemoRates = !payload.connected && state.selectedAward.code === "MA000010";
   const connectedLabel = payload.connected
     ? "Live FWC API response"
@@ -697,6 +851,11 @@ function rateTable(rates) {
 
 async function copyClause() {
   const clause = selectedClause();
+  if (!clause) {
+    showToast("Ask or select a clause first");
+    return;
+  }
+
   const text = `${clause.number}. ${clause.title}\n\n${clause.body.join("\n\n")}\n\nSource: ${clause.source} - ${awardHtmlUrl()}`;
   try {
     await navigator.clipboard.writeText(text);
@@ -707,6 +866,13 @@ async function copyClause() {
 }
 
 function handleAction(action) {
+  if (!state.selectedAward) {
+    answerTitle.textContent = "Select an award";
+    answerBody.innerHTML = `<p>Choose an award from the list before using this tool.</p>`;
+    showToast("Select an award first");
+    return;
+  }
+
   if (action === "copy-clause") {
     copyClause();
   }
@@ -737,8 +903,8 @@ function selectAward(code) {
   state.selectedAward = award;
   state.dynamicClauses = [];
   state.isLoadingAwardText = false;
-  state.selectedClauseId = award.code === "MA000010" ? "clause-34" : "";
-  state.lastSearchTerm = award.code === "MA000010" ? "annual leave clause" : "";
+  state.selectedClauseId = "";
+  state.lastSearchTerm = "";
 
   renderAwardMeta();
   renderClassificationOptions();
@@ -747,15 +913,11 @@ function selectAward(code) {
   renderClauses();
   setView("official");
 
-  if (award.code === "MA000010") {
-    summariseClause(clauses.find((clause) => clause.id === "clause-34"));
-  } else {
-    answerTitle.textContent = "Award selected";
-    answerBody.innerHTML = `
-      <p>${escapeHtml(award.title)} is selected from the Fair Work A-Z awards catalogue.</p>
-      <p>The full official award is loading in the embedded viewer. Use the contents sidebar inside the viewer to move through the award.</p>
-    `;
-  }
+  answerTitle.textContent = "Award selected";
+  answerBody.innerHTML = `
+    <p>${escapeHtml(award.title)} is selected from the Fair Work A-Z awards catalogue.</p>
+    <p>The full official award is loading in the embedded viewer. Use the contents sidebar inside the viewer to move through the award, or ask a specific question.</p>
+  `;
 
   showToast(`${award.code} opened`);
 }
@@ -766,8 +928,9 @@ function boot() {
   renderClassificationOptions();
   renderPayRatePlaceholder();
   renderClauses();
-  summariseClause(clauses.find((clause) => clause.id === "clause-34"));
-  requestAnimationFrame(() => selectClause("clause-34", "annual leave clause"));
+  setView("clauses");
+  answerTitle.textContent = "Ready";
+  answerBody.innerHTML = `<p>Select any award from the list to open the official award viewer.</p>`;
 
   awardSearch.addEventListener("input", renderAwardResults);
   industryFilterButton.addEventListener("click", toggleIndustryFilter);

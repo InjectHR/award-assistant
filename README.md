@@ -34,6 +34,42 @@ The server reads `PORT` from the hosting environment, so most web hosts can rout
 
 For a team-facing deployment, put authentication in front of the app if it should stay internal, and keep `FWC_API_SUBSCRIPTION_KEY` as a server environment variable only.
 
+## Deploy On Cloudflare Pages
+
+Cloudflare Pages does not run `server.js` the same way Render does. This repo includes Cloudflare Pages Functions in `functions/api/[[path]].js` so Cloudflare can run the app's `/api/...` routes while serving the static website from `public/`.
+
+In Cloudflare:
+
+1. Go to Workers & Pages.
+2. Create application > Pages > Connect to Git.
+3. Choose the GitHub repo, for example `InjectHR/award-assistant`.
+4. Use these build settings:
+   - Framework preset: None / No framework
+   - Build command: leave blank, or use `exit 0`
+   - Build output directory: `public`
+   - Root directory: leave blank unless the repo is inside another folder
+5. Add environment variables for both Production and Preview if you want live FWC API calls:
+   - `FWC_API_SUBSCRIPTION_KEY`
+   - `FWC_API_BASE_URL=https://api.fwc.gov.au`
+   - `FWC_API_AWARDS_PATH=/api/v1/awards`
+   - `FWC_API_PAY_RATES_PATH=/api/v1/awards/{id_or_code}/pay-rates`
+   - `FWC_API_KEY_HEADER=Ocp-Apim-Subscription-Key`
+6. Save and deploy.
+
+After the first deploy, open:
+
+```text
+https://your-cloudflare-pages-site.pages.dev/api/health
+```
+
+To check the FWC key and awards endpoint, open:
+
+```text
+https://your-cloudflare-pages-site.pages.dev/api/fwc-test
+```
+
+Do not put the FWC subscription key into `public/app.js`, GitHub, or any browser-visible file.
+
 ## FWC MAPD API
 
 The app includes a server-side pay-rate proxy at `/api/pay-rates`. By default it returns demo fallback rates sourced from MA000010 clause 20.1 / Schedule C only, because the live FWC Modern Awards Pay Database API requires a registered subscription key. For all other awards, configure the live MAPD key.

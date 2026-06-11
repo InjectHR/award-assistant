@@ -13,7 +13,7 @@
         <h1>Award Assistant</h1>
       </div>
       <div class="source-strip" aria-label="Official sources">
-        <a id="officialAwardLink" href="https://awards.fairwork.gov.au/MA000010.html" target="_blank" rel="noreferrer">Official award</a>
+        <a id="officialAwardLink" href="https://www.fairwork.gov.au/employment-conditions/awards/list-of-awards" target="_blank" rel="noreferrer">Select an award</a>
         <a href="https://www.fairwork.gov.au/employment-conditions/awards/list-of-awards" target="_blank" rel="noreferrer">A-Z awards</a>
         <a href="https://www.fwc.gov.au/work-conditions/awards/modern-awards-pay-database" target="_blank" rel="noreferrer">MAPD extracts</a>
         <a href="https://developer.fwc.gov.au/" target="_blank" rel="noreferrer">FWC API</a>
@@ -33,22 +33,22 @@
           <h2>Current award</h2>
           <div class="meta-grid">
             <span>Award code</span>
-            <strong id="currentAwardCode">MA000010</strong>
+            <strong id="currentAwardCode">None selected</strong>
             <span>Status</span>
-            <strong id="currentAwardStatus">Official source indexed</strong>
+            <strong id="currentAwardStatus">Choose an award</strong>
             <span>Use case</span>
-            <strong id="currentAwardUse">HR clause lookup</strong>
+            <strong id="currentAwardUse">Award lookup</strong>
           </div>
         </section>
 
         <section class="panel-section">
           <h2>Related tools</h2>
-          <button class="soft-button" type="button" data-action="view-pay-guide">View pay guide</button>
-          <a id="payGuidePdfLink" class="soft-button link-button" href="https://calculate.fairwork.gov.au/Download/AwardSummary?awardCode=ma000010&fileType=pdf" target="_blank" rel="noreferrer">Pay guide PDF</a>
-          <a id="payGuideDocxLink" class="soft-button link-button" href="https://calculate.fairwork.gov.au/Download/AwardSummary?awardCode=ma000010&fileType=docx" target="_blank" rel="noreferrer">Pay guide DOCX</a>
-          <button class="soft-button" type="button" data-action="check-classifications">Check classifications</button>
-          <button class="soft-button" type="button" data-action="check-pay-rates">Check pay rates</button>
-          <button class="soft-button" type="button" data-action="compare-nes">Compare with NES</button>
+          <button class="soft-button" type="button" data-action="view-pay-guide" disabled>View pay guide</button>
+          <a id="payGuidePdfLink" class="soft-button link-button is-disabled" aria-disabled="true" target="_blank" rel="noreferrer">Pay guide PDF</a>
+          <a id="payGuideDocxLink" class="soft-button link-button is-disabled" aria-disabled="true" target="_blank" rel="noreferrer">Pay guide DOCX</a>
+          <button class="soft-button" type="button" data-action="check-classifications" disabled>Check classifications</button>
+          <button class="soft-button" type="button" data-action="check-pay-rates" disabled>Check pay rates</button>
+          <button class="soft-button" type="button" data-action="compare-nes" disabled>Compare with NES</button>
         </section>
       </aside>
 
@@ -56,13 +56,13 @@
         <div class="viewer-toolbar">
           <div>
             <p class="eyebrow">Embedded viewer</p>
-            <h2 id="viewerTitle">Manufacturing and Associated Industries and Occupations Award 2020</h2>
+            <h2 id="viewerTitle">Select an award</h2>
           </div>
           <div class="tabs" role="tablist" aria-label="Viewer tabs">
             <button class="tab is-active" type="button" data-view="clauses">Clauses</button>
-            <button class="tab" type="button" data-view="official">Award viewer</button>
-            <button class="tab" type="button" data-view="rates">Rates</button>
-            <button class="tab" type="button" data-view="payGuide">Pay guide</button>
+            <button class="tab" type="button" data-view="official" disabled>Award viewer</button>
+            <button class="tab" type="button" data-view="rates" disabled>Rates</button>
+            <button class="tab" type="button" data-view="payGuide" disabled>Pay guide</button>
           </div>
         </div>
 
@@ -72,7 +72,7 @@
           <iframe
             id="awardHtmlFrame"
             title="Award HTML viewer"
-            src="/api/award-html?code=MA000010"
+            src="about:blank"
             loading="lazy"
           ></iframe>
           <p class="frame-note">
@@ -84,7 +84,7 @@
           <div class="rates-toolbar">
             <label for="classificationSelect">Classification</label>
             <select id="classificationSelect"></select>
-            <button id="rateLookupButton" class="primary-button" type="button">Check pay rates</button>
+            <button id="rateLookupButton" class="primary-button" type="button" disabled>Check pay rates</button>
           </div>
           <div id="payRateOutput" class="rate-output" aria-live="polite"></div>
         </div>
@@ -93,7 +93,7 @@
           <iframe
             id="payGuideFrame"
             title="Pay guide viewer"
-            src="/api/pay-guide?awardCode=MA000010"
+            src="about:blank"
             loading="lazy"
           ></iframe>
           <p class="frame-note">
@@ -105,14 +105,14 @@
       <aside class="assistant-panel" aria-label="AI explanation panel">
         <section class="ask-box">
           <label class="field-label" for="questionInput">Ask the award</label>
-          <textarea id="questionInput" rows="3">annual leave clause</textarea>
-          <button id="askButton" class="primary-button" type="button">Ask</button>
+          <textarea id="questionInput" rows="3" placeholder="Select an award first, then ask a question"></textarea>
+          <button id="askButton" class="primary-button" type="button" disabled>Ask</button>
         </section>
 
         <section class="action-row" aria-label="Clause actions">
-          <button type="button" data-action="copy-clause">Copy clause</button>
-          <button type="button" data-action="summarise-clause">Summarise clause</button>
-          <button type="button" data-action="compare-nes">Compare with NES</button>
+          <button type="button" data-action="copy-clause" disabled>Copy clause</button>
+          <button type="button" data-action="summarise-clause" disabled>Summarise clause</button>
+          <button type="button" data-action="compare-nes" disabled>Compare with NES</button>
         </section>
 
         <section class="answer-panel">
@@ -121,7 +121,7 @@
             <h2 id="answerTitle">Ready</h2>
           </div>
           <div id="answerBody" class="answer-body">
-            Search for the Manufacturing Award, then ask about the annual leave clause.
+            Select any award from the list to open the official award viewer.
           </div>
         </section>
 
