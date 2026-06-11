@@ -577,6 +577,7 @@ async function searchOfficialAwardText(query, topic = "") {
     });
     const response = await fetch(`/api/award-search?${params.toString()}`);
     const payload = await response.json();
+    console.log(payload);
     const matches = Array.isArray(payload.matches) ? payload.matches : [];
     state.dynamicClauses = matches.map((match, index) => ({
       id: match.id || `official-match-${index + 1}`,
